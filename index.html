@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handwerker Diagnose</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff;
+      --bg-soft: #f8fafc;
+      --header: #0f172a;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-light: #94a3b8;
+      --border: #e2e8f0;
+      --border-soft: #f1f5f9;
+      --accent: #1e293b;
+      --accent-hover: #334155;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* HEADER */
+    header.app-header {
+      background: var(--header);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--header);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -0.5px;
+    }
+    .brand-title {
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    /* MAIN */
+    main {
+      padding: 48px 24px 80px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 36px 36px 32px;
+      max-width: 680px;
+      width: 100%;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-soft);
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    p.intro {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.55;
+    }
+
+    /* FORM */
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: 0.1px;
+      text-transform: uppercase;
+    }
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--bg-soft);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+    textarea::placeholder,
+    input[type="text"]::placeholder {
+      color: var(--text-light);
+    }
+    textarea:focus,
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: white;
+    }
+    label.field-spacing {
+      margin-top: 18px;
+    }
+    input.field-error,
+    textarea.field-error {
+      border-color: #dc2626 !important;
+      background: #fef2f2 !important;
+    }
+    input.field-error:focus,
+    textarea.field-error:focus {
+      border-color: #dc2626 !important;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 13px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.1px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover {
+      background: var(--accent-hover);
+    }
+    button:disabled {
+      background: var(--text-light);
+      cursor: not-allowed;
+    }
+
+    /* RESULT */
+    .result {
+      margin-top: 24px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      display: none;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .result.show { display: block; }
+    .result.loading,
+    .result.message {
+      padding: 14px 18px;
+      background: var(--bg-soft);
+      border-radius: 8px;
+      border: 1px solid var(--border-soft);
+      font-size: 13px;
+    }
+    .result.loading {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .result.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    /* ANSWER BOXES */
+    .answer-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .answer-box {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 22px 20px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .answer-box:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+    .answer-box-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .answer-box-num {
+      background: var(--accent);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      letter-spacing: -0.2px;
+    }
+    .answer-box-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.1px;
+    }
+    .answer-box-content {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* MOBILE */
+    @media (max-width: 640px) {
+      header.app-header {
+        padding: 0 16px;
+        height: 56px;
+      }
+      .brand-title { font-size: 13px; }
+      main { padding: 24px 16px 60px; }
+      .container { padding: 24px 20px; }
+      h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">HD</div>
+      <div class="brand-title">Handwerker Diagnose</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <h1>Beschreibe dein Problem</h1>
+      <p class="intro">Erkläre kurz, was bei dir nicht funktioniert. Du bekommst eine fundierte Einschätzung mit Diagnose, DIY-Empfehlung, Kostenrahmen und passenden Fragen für den Handwerker.</p>
+
+      <label for="input-text">Problem-Beschreibung</label>
+      <textarea id="input-text" placeholder="Z.B.: Der Wasserhahn im Bad tropft seit zwei Tagen am Auslauf..."></textarea>
+
+      <label for="input-city" class="field-spacing">Deine Stadt</label>
+      <input type="text" id="input-city" placeholder="z.B. Oldenburg" autocomplete="address-level2" />
+
+      <button id="analyze-btn">Analysieren</button>
+
+      <div class="result" id="result"></div>
+    </div>
+  </main>
+
+  <script>
+    const SECTIONS = [
+      { title: 'Problem-Diagnose' },
+      { title: 'Selbst lösbar?' },
+      { title: 'Geschätzte Kosten' },
+      { title: 'Fragen an den Handwerker' }
+    ];
+
+    function parseAnswer(text) {
+      const sections = [null, null, null, null];
+      const re = /(?:^|\n)\s*\*{0,2}([1-4])[.)]\s*\*{0,2}\s*([\s\S]*?)(?=(?:\n)\s*\*{0,2}[1-4][.)]|$)/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        const idx = parseInt(m[1]) - 1;
+        sections[idx] = m[2].trim().replace(/^\*+|\*+$/g, '').trim();
+      }
+      return sections;
+    }
+
+    function renderAnswer(text) {
+      const sections = parseAnswer(text);
+      if (sections.every(s => !s)) return null;
+
+      const container = document.createElement('div');
+      container.className = 'answer-grid';
+
+      sections.forEach((content, i) => {
+        if (!content) return;
+        const meta = SECTIONS[i];
+        const box = document.createElement('div');
+        box.className = 'answer-box';
+
+        const header = document.createElement('div');
+        header.className = 'answer-box-header';
+
+        const num = document.createElement('div');
+        num.className = 'answer-box-num';
+        num.textContent = (i + 1).toString();
+
+        const title = document.createElement('div');
+        title.className = 'answer-box-title';
+        title.textContent = meta.title;
+
+        header.appendChild(num);
+        header.appendChild(title);
+
+        const contentEl = document.createElement('div');
+        contentEl.className = 'answer-box-content';
+        contentEl.textContent = content;
+
+        box.appendChild(header);
+        box.appendChild(contentEl);
+        container.appendChild(box);
+      });
+
+      return container;
+    }
+
+    function resetResultClasses() {
+      result.className = 'result';
+    }
+
+    function clearFieldErrors() {
+      document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+    }
+
+    function describeNetworkError(err) {
+      if (err.name === 'TypeError' && /fetch|network|load/i.test(err.message)) {
+        return 'Verbindung fehlgeschlagen. Bitte Internetverbindung prüfen.';
+      }
+      return 'Unerwarteter Fehler: ' + (err.message || 'Unbekannt');
+    }
+
+    const btn = document.getElementById('analyze-btn');
+    const input = document.getElementById('input-text');
+    const cityInput = document.getElementById('input-city');
+    const result = document.getElementById('result');
+
+    btn.addEventListener('click', async () => {
+      const text = input.value.trim();
+      const city = cityInput.value.trim();
+
+      clearFieldErrors();
+
+      if (!text) {
+        input.classList.add('field-error');
+        input.focus();
+        resetResultClasses();
+        result.classList.add('show', 'message', 'error');
+        result.textContent = 'Bitte beschreibe zuerst dein Problem im Textfeld oben.';
+        return;
+      }
+
+      resetResultClasses();
+      result.classList.add('show', 'message', 'loading');
+      result.textContent = 'Analysiere...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/.netlify/functions/analyze', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ text, city })
+        });
+
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch (e) {
+          // Body kein JSON — behandeln wie generischen Fehler
+        }
+
+        if (!response.ok) {
+          const errorMsg = (payload && payload.error)
+            ? payload.error
+            : `Unerwarteter Fehler (Status ${response.status}).`;
+          resetResultClasses();
+          result.classList.add('show', 'message', 'error');
+          result.textContent = errorMsg;
+          return;
+        }
+
+        const answer = payload && payload.answer;
+        if (!answer) {
+          resetResultClasses();
+          result.classList.add('show', 'message', 'error');
+          result.textContent = 'Keine verwertbare Antwort erhalten. Bitte erneut versuchen.';
+          return;
+        }
+
+        resetResultClasses();
+        result.classList.add('show');
+        const rendered = renderAnswer(answer);
+        if (rendered) {
+          result.appendChild(rendered);
+        } else {
+          result.classList.add('message');
+          result.textContent = answer;
+        }
+      } catch (err) {
+        resetResultClasses();
+        result.classList.add('show', 'message', 'error');
+        result.textContent = describeNetworkError(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
