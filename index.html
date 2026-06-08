@@ -255,6 +255,114 @@
       word-wrap: break-word;
     }
 
+    /* TEXTAREA WITH MIC BUTTON */
+    .textarea-wrap {
+      position: relative;
+    }
+    .mic-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      margin: 0;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      box-shadow: var(--shadow-sm);
+    }
+    .mic-btn:hover {
+      background: var(--bg-soft);
+      border-color: #cbd5e1;
+    }
+    .mic-btn:active {
+      transform: scale(0.95);
+    }
+    .mic-btn svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .mic-btn:hover svg {
+      color: var(--text);
+    }
+    .mic-btn.recording {
+      background: #dc2626;
+      border-color: #dc2626;
+      animation: mic-pulse 1.5s ease-in-out infinite;
+    }
+    .mic-btn.recording svg {
+      color: white;
+    }
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+    }
+    .mic-status {
+      display: none;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .mic-status.show { display: block; }
+    .mic-status.recording {
+      color: #dc2626;
+      font-weight: 500;
+    }
+    .mic-status.error {
+      color: #991b1b;
+    }
+
+    /* MAP SECTION */
+    .map-section {
+      display: none;
+      margin-top: 20px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 22px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .map-section.show { display: block; }
+    .map-section-header {
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .map-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.1px;
+      margin-bottom: 4px;
+    }
+    .map-section-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .map-iframe-wrap {
+      position: relative;
+      width: 100%;
+      height: 380px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--bg-soft);
+    }
+    .map-iframe-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
     /* MOBILE */
     @media (max-width: 640px) {
       header.app-header {
@@ -265,6 +373,8 @@
       main { padding: 24px 16px 60px; }
       .container { padding: 24px 20px; }
       h1 { font-size: 20px; }
+      .map-section { padding: 16px 16px 18px; }
+      .map-iframe-wrap { height: 300px; }
     }
   </style>
 </head>
@@ -282,7 +392,18 @@
       <p class="intro">Erkläre kurz, was bei dir nicht funktioniert. Du bekommst eine fundierte Einschätzung mit Diagnose, DIY-Empfehlung, Kostenrahmen und passenden Fragen für den Handwerker.</p>
 
       <label for="input-text">Problem-Beschreibung</label>
-      <textarea id="input-text" placeholder="Z.B.: Der Wasserhahn im Bad tropft seit zwei Tagen am Auslauf..."></textarea>
+      <div class="textarea-wrap">
+        <textarea id="input-text" placeholder="Z.B.: Der Wasserhahn im Bad tropft seit zwei Tagen am Auslauf..."></textarea>
+        <button type="button" id="mic-btn" class="mic-btn" aria-label="Sprachaufnahme starten" title="Per Sprache eingeben">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="mic-status" id="mic-status"></div>
 
       <label for="input-city" class="field-spacing">Deine Stadt</label>
       <input type="text" id="input-city" placeholder="z.B. Oldenburg" autocomplete="address-level2" />
@@ -290,6 +411,16 @@
       <button id="analyze-btn">Analysieren</button>
 
       <div class="result" id="result"></div>
+
+      <div class="map-section" id="map-section">
+        <div class="map-section-header">
+          <div class="map-section-title" id="map-section-title">Handwerker in deiner Nähe</div>
+          <div class="map-section-subtitle">Echte Betriebe auf Google Maps — klick auf einen Pin für Bewertungen, Öffnungszeiten und Telefonnummer.</div>
+        </div>
+        <div class="map-iframe-wrap">
+          <iframe id="map-iframe" src="" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" title="Handwerker in deiner Nähe"></iframe>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -303,11 +434,29 @@
 
     function parseAnswer(text) {
       const sections = [null, null, null, null];
-      const re = /(?:^|\n)\s*\*{0,2}([1-4])[.)]\s*\*{0,2}\s*([\s\S]*?)(?=(?:\n)\s*\*{0,2}[1-4][.)]|$)/g;
+      // Erlaubt optional Markdown-Heading (#, ##, ###) vor der Zahl als Robustheits-Schutz,
+      // falls Claude doch Überschriften verwendet.
+      const re = /(?:^|\n)[ \t]*(?:#{1,3}[ \t]+)?\*{0,2}([1-4])[.)]\s*\*{0,2}\s*([\s\S]*?)(?=(?:\n)[ \t]*(?:#{1,3}[ \t]+)?\*{0,2}[1-4][.)]|$)/g;
       let m;
       while ((m = re.exec(text)) !== null) {
         const idx = parseInt(m[1]) - 1;
-        sections[idx] = m[2].trim().replace(/^\*+|\*+$/g, '').trim();
+        let content = m[2].trim().replace(/^\*+|\*+$/g, '').trim();
+
+        // Wenn Claude trotz Anweisung eine Heading-Zeile nach der Zahl einfügt
+        // (z.B. "Diagnose" oder "Selbst lösbar?"), strippe sie weg.
+        const firstNewline = content.indexOf('\n');
+        if (firstNewline > 0 && firstNewline < 80) {
+          const firstLine = content.slice(0, firstNewline).trim();
+          const rest = content.slice(firstNewline + 1).trim();
+          const looksLikeHeading =
+            rest.length > 0 &&
+            (firstLine.endsWith('?') || /^[\wäöüÄÖÜß\s\-:]{1,60}$/.test(firstLine.replace(/[*:]/g, '').trim()));
+          if (looksLikeHeading && firstLine.replace(/[*]/g, '').length < 70) {
+            content = rest;
+          }
+        }
+
+        sections[idx] = content;
       }
       return sections;
     }
@@ -366,16 +515,155 @@
       return 'Unerwarteter Fehler: ' + (err.message || 'Unbekannt');
     }
 
+    // Trennt "Handwerker-Typ: X" aus der Antwort raus — für die Karten-Suche.
+    function extractTrade(text) {
+      const re = /(?:^|\n)\s*\*{0,2}\s*Handwerker[‐‑‒–—―\-\s]?Typ\s*:\s*([^\n]+?)\s*$/im;
+      const match = text.match(re);
+      if (!match) return { trade: null, cleanText: text };
+      const trade = match[1]
+        .replace(/^\*+|\*+$/g, '')
+        .replace(/[\.\,;]+\s*$/g, '')
+        .trim();
+      const cleanText = text.replace(re, '').trim();
+      return { trade: trade || null, cleanText };
+    }
+
     const btn = document.getElementById('analyze-btn');
     const input = document.getElementById('input-text');
     const cityInput = document.getElementById('input-city');
     const result = document.getElementById('result');
+    const micBtn = document.getElementById('mic-btn');
+    const micStatus = document.getElementById('mic-status');
+    const mapSection = document.getElementById('map-section');
+    const mapIframe = document.getElementById('map-iframe');
+    const mapSectionTitle = document.getElementById('map-section-title');
 
+    // ===== SPEECH-TO-TEXT (Web Speech API) =====
+    // Funktioniert in Chrome, Edge, Chrome auf Android. iOS Safari unterstützt
+    // das nicht — dort wird der Button automatisch ausgeblendet.
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'de-DE';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      let isRecording = false;
+      let baseText = '';
+
+      recognition.onstart = () => {
+        isRecording = true;
+        micBtn.classList.add('recording');
+        micBtn.setAttribute('aria-label', 'Sprachaufnahme stoppen');
+        micBtn.title = 'Klick zum Stoppen';
+        micStatus.classList.remove('error');
+        micStatus.classList.add('show', 'recording');
+        micStatus.textContent = 'Aufnahme läuft… sprich los. Klick aufs Mikro zum Stoppen.';
+      };
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        let finalChunk = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalChunk += transcript;
+          } else {
+            interim += transcript;
+          }
+        }
+        if (finalChunk) {
+          baseText = (baseText ? baseText + ' ' : '') + finalChunk.trim();
+          baseText = baseText.replace(/\s+/g, ' ').trim();
+        }
+        const display = interim
+          ? (baseText ? baseText + ' ' + interim : interim)
+          : baseText;
+        input.value = display;
+        input.classList.remove('field-error');
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        micBtn.setAttribute('aria-label', 'Sprachaufnahme starten');
+        micBtn.title = 'Per Sprache eingeben';
+        micStatus.classList.remove('recording');
+        if (!micStatus.classList.contains('error')) {
+          micStatus.classList.remove('show');
+          micStatus.textContent = '';
+        }
+      };
+
+      recognition.onerror = (event) => {
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        micStatus.classList.remove('recording');
+        if (event.error === 'no-speech') {
+          // kein gesprochener Text erkannt — einfach still beenden
+          micStatus.classList.remove('show', 'error');
+          micStatus.textContent = '';
+          return;
+        }
+        micStatus.classList.add('show', 'error');
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          micStatus.textContent = 'Mikrofon-Zugriff verweigert. Bitte im Browser-Schloss-Symbol oben links die Mikrofon-Berechtigung erlauben und erneut versuchen.';
+        } else if (event.error === 'audio-capture') {
+          micStatus.textContent = 'Kein Mikrofon gefunden. Bitte Mikro anschließen oder Geräteeinstellungen prüfen.';
+        } else if (event.error === 'network') {
+          micStatus.textContent = 'Spracherkennung braucht eine aktive Internetverbindung.';
+        } else {
+          micStatus.textContent = 'Sprachaufnahme-Fehler: ' + event.error;
+        }
+      };
+
+      micBtn.addEventListener('click', () => {
+        if (isRecording) {
+          recognition.stop();
+        } else {
+          baseText = input.value.trim();
+          try {
+            recognition.start();
+          } catch (e) {
+            // Wenn .start() während eines anderen Recognition-Calls aufgerufen wird
+            console.warn('Recognition start fehlgeschlagen', e);
+          }
+        }
+      });
+    } else {
+      // Browser unterstützt keine Web Speech API (z.B. Safari iOS) — Button verbergen
+      micBtn.style.display = 'none';
+    }
+
+    // ===== MAP EMBED =====
+    function showMap(trade, city) {
+      if (!trade) {
+        hideMap();
+        return;
+      }
+      const queryParts = [trade];
+      if (city) queryParts.push(city);
+      const query = encodeURIComponent(queryParts.join(' '));
+      mapIframe.src = 'https://maps.google.com/maps?q=' + query + '&output=embed';
+      const cityLabel = city ? ' in ' + city : ' in deiner Nähe';
+      mapSectionTitle.textContent = trade + cityLabel;
+      mapSection.classList.add('show');
+    }
+
+    function hideMap() {
+      mapSection.classList.remove('show');
+      mapIframe.src = '';
+    }
+
+    // ===== ANALYZE HANDLER =====
     btn.addEventListener('click', async () => {
       const text = input.value.trim();
       const city = cityInput.value.trim();
 
       clearFieldErrors();
+      hideMap();
 
       if (!text) {
         input.classList.add('field-error');
@@ -423,15 +711,20 @@
           return;
         }
 
+        // Handwerker-Typ rausziehen für Karten-Suche, Rest in die 4 Boxen rendern.
+        const { trade, cleanText } = extractTrade(answer);
+
         resetResultClasses();
         result.classList.add('show');
-        const rendered = renderAnswer(answer);
+        const rendered = renderAnswer(cleanText);
         if (rendered) {
           result.appendChild(rendered);
         } else {
           result.classList.add('message');
-          result.textContent = answer;
+          result.textContent = cleanText;
         }
+
+        showMap(trade, city);
       } catch (err) {
         resetResultClasses();
         result.classList.add('show', 'message', 'error');
