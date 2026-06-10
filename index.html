@@ -465,8 +465,8 @@
       .map-iframe-wrap { height: 300px; }
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js" integrity="sha384-zlyfqEbT4jSCdwjAvWBKVf6IRwsFsl0HnIfvJoEJYwhfp7vBb3yi+/9dDeYLrlSr" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js" integrity="sha384-PaSykP3GZuIs5o4RH+H3wYbuYldJjyVOzy6QwO6dGN8/HHKjuOyTNDsBoebI4xBh" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 </head>
 <body>
   <header class="app-header">
@@ -530,7 +530,7 @@
       let m;
       while ((m = re.exec(text)) !== null) {
         const idx = parseInt(m[1]) - 1;
-        let content = m[2].trim().replace(/^\*+|\*+$/g, '').trim();
+        let content = m[2].trim();
 
         // Wenn Claude trotz Anweisung eine Heading-Zeile nach der Zahl einfügt
         // (z.B. "Diagnose" oder "Selbst lösbar?"), strippe sie weg.
