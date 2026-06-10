@@ -863,16 +863,27 @@
 
     function showShareBar(problem, city, answer) {
       const url = buildShareUrl(problem, city, answer);
-      // Über 2000 Zeichen wird der Link in WhatsApp/Mail abgeschnitten —
-      // dann lieber gar nicht anbieten als kaputten Link verteilen.
-      if (url.length > 2000) {
-        hideShareBar();
+      shareBar.classList.add('show');
+      shareStatus.className = 'share-status';
+      // Browser-URL-Limits liegen meist bei 8000+, WhatsApp ist tolerant.
+      // Über 6000 wird's bei manchen Apps eng — dann sichtbares Feedback
+      // statt stummem Verstecken, damit der User weiß was los ist.
+      if (url.length > 6000) {
+        currentShareUrl = null;
+        shareBtn.style.display = 'none';
+        shareStatus.textContent = 'Diagnose zu lang für einen teilbaren Link.';
         return;
       }
       currentShareUrl = url;
-      shareBar.classList.add('show');
+      shareBtn.style.display = '';
       shareStatus.textContent = '';
-      shareStatus.className = 'share-status';
+      // Browser-URL synchron halten: Reload zeigt dieselbe Diagnose, und
+      // wer will kann die URL direkt aus der Adressleiste kopieren.
+      try {
+        history.replaceState(null, '', url);
+      } catch (e) {
+        // Manche Browser werfen bei sehr langer URL — Button funktioniert trotzdem.
+      }
     }
 
     function hideShareBar() {
