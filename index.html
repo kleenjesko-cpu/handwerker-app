@@ -251,8 +251,96 @@
       font-size: 13.5px;
       color: var(--text-muted);
       line-height: 1.65;
-      white-space: pre-wrap;
       word-wrap: break-word;
+    }
+    .answer-box-content p {
+      margin: 0 0 10px 0;
+    }
+    .answer-box-content p:last-child {
+      margin-bottom: 0;
+    }
+    .answer-box-content strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .answer-box-content em {
+      font-style: italic;
+    }
+    .answer-box-content ul,
+    .answer-box-content ol {
+      margin: 6px 0 10px 20px;
+      padding: 0;
+    }
+    .answer-box-content ul:last-child,
+    .answer-box-content ol:last-child {
+      margin-bottom: 0;
+    }
+    .answer-box-content li {
+      margin-bottom: 4px;
+    }
+    .answer-box-content li:last-child {
+      margin-bottom: 0;
+    }
+    .answer-box-content a {
+      color: #2563eb;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-word;
+    }
+    .answer-box-content a:hover {
+      color: #1e40af;
+    }
+    .answer-box-content code {
+      background: var(--bg-soft);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, 'SF Mono', monospace;
+      font-size: 12.5px;
+      color: var(--text);
+    }
+    .answer-box-content h1,
+    .answer-box-content h2,
+    .answer-box-content h3,
+    .answer-box-content h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 12px 0 6px;
+      letter-spacing: -0.1px;
+    }
+    .answer-box-content h1:first-child,
+    .answer-box-content h2:first-child,
+    .answer-box-content h3:first-child,
+    .answer-box-content h4:first-child {
+      margin-top: 0;
+    }
+    .answer-box-content hr {
+      border: 0;
+      border-top: 1px solid var(--border-soft);
+      margin: 10px 0;
+    }
+    .answer-box-content blockquote {
+      border-left: 3px solid var(--border);
+      padding-left: 12px;
+      margin: 8px 0;
+      color: var(--text-light);
+    }
+    .answer-box-content table {
+      border-collapse: collapse;
+      margin: 8px 0;
+      width: 100%;
+      font-size: 13px;
+    }
+    .answer-box-content th,
+    .answer-box-content td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .answer-box-content th {
+      background: var(--bg-soft);
+      font-weight: 600;
+      color: var(--text);
     }
 
     /* TEXTAREA WITH MIC BUTTON */
@@ -377,6 +465,8 @@
       .map-iframe-wrap { height: 300px; }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js" integrity="sha384-zlyfqEbT4jSCdwjAvWBKVf6IRwsFsl0HnIfvJoEJYwhfp7vBb3yi+/9dDeYLrlSr" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js" integrity="sha384-PaSykP3GZuIs5o4RH+H3wYbuYldJjyVOzy6QwO6dGN8/HHKjuOyTNDsBoebI4xBh" crossorigin="anonymous"></script>
 </head>
 <body>
   <header class="app-header">
@@ -490,7 +580,15 @@
 
         const contentEl = document.createElement('div');
         contentEl.className = 'answer-box-content';
-        contentEl.textContent = content;
+        // Markdown sicher rendern. Falls die CDN-Libraries nicht geladen haben,
+        // fällt's auf textContent zurück — App bleibt funktional, sieht nur
+        // weniger schön aus.
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+          const html = marked.parse(content, { breaks: true, gfm: true });
+          contentEl.innerHTML = DOMPurify.sanitize(html);
+        } else {
+          contentEl.textContent = content;
+        }
 
         box.appendChild(header);
         box.appendChild(contentEl);
