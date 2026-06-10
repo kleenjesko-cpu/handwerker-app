@@ -408,6 +408,54 @@
       color: #991b1b;
     }
 
+    /* SHARE BAR */
+    .share-bar {
+      display: none;
+      margin-top: 14px;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .share-bar.show { display: flex; }
+    .share-btn {
+      margin: 0;
+      width: auto;
+      padding: 9px 14px;
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .share-btn:hover {
+      background: var(--bg-soft);
+      border-color: #cbd5e1;
+    }
+    .share-btn svg {
+      width: 15px;
+      height: 15px;
+      color: var(--text-muted);
+    }
+    .share-status {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .share-status.success {
+      color: #15803d;
+      font-weight: 500;
+    }
+    .share-status.error {
+      color: #991b1b;
+    }
+
     /* MAP SECTION */
     .map-section {
       display: none;
@@ -501,6 +549,17 @@
       <button id="analyze-btn">Analysieren</button>
 
       <div class="result" id="result"></div>
+
+      <div class="share-bar" id="share-bar">
+        <button type="button" class="share-btn" id="share-btn" aria-label="Diagnose-Link in Zwischenablage kopieren">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          Link kopieren
+        </button>
+        <div class="share-status" id="share-status"></div>
+      </div>
 
       <div class="map-section" id="map-section">
         <div class="map-section-header">
@@ -637,6 +696,9 @@
     const mapSection = document.getElementById('map-section');
     const mapIframe = document.getElementById('map-iframe');
     const mapSectionTitle = document.getElementById('map-section-title');
+    const shareBar = document.getElementById('share-bar');
+    const shareBtn = document.getElementById('share-btn');
+    const shareStatus = document.getElementById('share-status');
 
     // ===== SPEECH-TO-TEXT (Web Speech API) =====
     // Funktioniert in Chrome, Edge, Chrome auf Android. iOS Safari unterstützt
@@ -757,6 +819,105 @@
       mapIframe.src = '';
     }
 
+    // ===== SHARE LINK =====
+    // Kodiert die Diagnose als URL-Parameter (?d=…), damit User sie weitergeben
+    // können ohne dass wir ein Backend bräuchten. UTF-8-sichere URL-safe Base64,
+    // damit auch Umlaute und € sauber durchkommen.
+    function encodeBase64Url(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    }
+
+    function decodeBase64Url(s) {
+      let base64 = s.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) base64 += '=';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+
+    function buildShareUrl(problem, city, answer) {
+      const payload = JSON.stringify({ p: problem, c: city, a: answer });
+      return location.origin + location.pathname + '?d=' + encodeBase64Url(payload);
+    }
+
+    function decodeShareData(d) {
+      try {
+        const data = JSON.parse(decodeBase64Url(d));
+        if (typeof data.p !== 'string' || typeof data.c !== 'string' || typeof data.a !== 'string') {
+          return null;
+        }
+        return data;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    let currentShareUrl = null;
+
+    function showShareBar(problem, city, answer) {
+      const url = buildShareUrl(problem, city, answer);
+      // Über 2000 Zeichen wird der Link in WhatsApp/Mail abgeschnitten —
+      // dann lieber gar nicht anbieten als kaputten Link verteilen.
+      if (url.length > 2000) {
+        hideShareBar();
+        return;
+      }
+      currentShareUrl = url;
+      shareBar.classList.add('show');
+      shareStatus.textContent = '';
+      shareStatus.className = 'share-status';
+    }
+
+    function hideShareBar() {
+      shareBar.classList.remove('show');
+      currentShareUrl = null;
+      shareStatus.textContent = '';
+      shareStatus.className = 'share-status';
+    }
+
+    shareBtn.addEventListener('click', async () => {
+      if (!currentShareUrl) return;
+      try {
+        await navigator.clipboard.writeText(currentShareUrl);
+        shareStatus.classList.remove('error');
+        shareStatus.classList.add('success');
+        shareStatus.textContent = 'Link kopiert — jetzt z.B. in WhatsApp einfügen.';
+        setTimeout(() => {
+          shareStatus.textContent = '';
+          shareStatus.classList.remove('success');
+        }, 3000);
+      } catch (e) {
+        // Fallback z.B. wenn Clipboard-API ohne HTTPS oder ohne Nutzer-Geste blockt:
+        // Prompt mit der URL — User kann mit Strg+C manuell kopieren.
+        window.prompt('Link kopieren (Strg+C, dann Enter):', currentShareUrl);
+      }
+    });
+
+    // Gemeinsamer Renderer: wird sowohl vom Analyse-Klick als auch vom
+    // ?d=-Link-Loader verwendet. innerHTML wird geleert, damit mehrfaches
+    // Klicken nicht in zwei übereinanderliegende Antworten resultiert.
+    function displayAnswer(answer, city) {
+      const { trade, cleanText } = extractTrade(answer);
+      resetResultClasses();
+      result.classList.add('show');
+      result.innerHTML = '';
+      const rendered = renderAnswer(cleanText);
+      if (rendered) {
+        result.appendChild(rendered);
+      } else {
+        result.classList.add('message');
+        result.textContent = cleanText;
+      }
+      showMap(trade, city);
+    }
+
     // ===== ANALYZE HANDLER =====
     btn.addEventListener('click', async () => {
       const text = input.value.trim();
@@ -764,6 +925,7 @@
 
       clearFieldErrors();
       hideMap();
+      hideShareBar();
 
       if (!text) {
         input.classList.add('field-error');
@@ -772,6 +934,13 @@
         result.classList.add('show', 'message', 'error');
         result.textContent = 'Bitte beschreibe zuerst dein Problem im Textfeld oben.';
         return;
+      }
+
+      // Eventuelle ?d=-Parameter aus einem geteilten Link entfernen,
+      // damit nach einer neuen Analyse beim Reload die NEUE Antwort sichtbar
+      // bleibt — sonst würde der alte Link gewinnen.
+      if (location.search) {
+        history.replaceState(null, '', location.pathname);
       }
 
       resetResultClasses();
@@ -811,20 +980,8 @@
           return;
         }
 
-        // Handwerker-Typ rausziehen für Karten-Suche, Rest in die 4 Boxen rendern.
-        const { trade, cleanText } = extractTrade(answer);
-
-        resetResultClasses();
-        result.classList.add('show');
-        const rendered = renderAnswer(cleanText);
-        if (rendered) {
-          result.appendChild(rendered);
-        } else {
-          result.classList.add('message');
-          result.textContent = cleanText;
-        }
-
-        showMap(trade, city);
+        displayAnswer(answer, city);
+        showShareBar(text, city, answer);
       } catch (err) {
         resetResultClasses();
         result.classList.add('show', 'message', 'error');
@@ -833,6 +990,29 @@
         btn.disabled = false;
       }
     });
+
+    // ===== INIT: GETEILTER LINK =====
+    // Wenn die Seite mit ?d=... geöffnet wird, dekodieren wir und zeigen die
+    // gespeicherte Diagnose direkt an — ohne neuen API-Call. Eingabefelder
+    // werden befüllt, damit der Empfänger sieht, was ursprünglich gefragt wurde.
+    (function loadShareLinkIfPresent() {
+      const params = new URLSearchParams(location.search);
+      const d = params.get('d');
+      if (!d) return;
+
+      const data = decodeShareData(d);
+      if (!data) {
+        resetResultClasses();
+        result.classList.add('show', 'message', 'error');
+        result.textContent = 'Geteilter Link konnte nicht gelesen werden — er ist möglicherweise beschädigt.';
+        return;
+      }
+
+      input.value = data.p;
+      cityInput.value = data.c;
+      displayAnswer(data.a, data.c);
+      showShareBar(data.p, data.c, data.a);
+    })();
   </script>
 </body>
 </html>
